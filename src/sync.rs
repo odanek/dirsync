@@ -10,7 +10,7 @@ use walkdir::{DirEntry, WalkDir};
 use crate::{DirSyncConfig, DirSyncError};
 
 fn is_not_ignored(entry: &DirEntry) -> bool {
-    entry.file_name() != ".DS_Store"
+    entry.file_name() != ".DS_Store" && entry.file_name() != "tmp"
 }
 
 fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
@@ -67,7 +67,7 @@ fn add_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
         fs::create_dir(dst_file)?;
     } else {
         println!("CF   {:?}", dst_file);
-        fs::copy(src_file, dst_file)?;    
+        fs::copy(src_file, dst_file)?;
     }
 
     Ok(())
@@ -95,7 +95,7 @@ fn update_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
 }
 
 fn remove_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
-    let full_path = config.dst_path(path);        
+    let full_path = config.dst_path(path);
 
     if full_path.is_dir() {
         println!("RD   {:?}", full_path);
@@ -134,7 +134,7 @@ pub fn sync_dirs(config: &DirSyncConfig) -> Result<(), DirSyncError> {
 
     println!("=== Added ===");
     for path in &added_paths {
-        println!("{}", path.display());        
+        println!("{}", path.display());
     }
     println!();
 
@@ -155,14 +155,14 @@ pub fn sync_dirs(config: &DirSyncConfig) -> Result<(), DirSyncError> {
         for path in removed_paths.iter().rev() {
             remove_file(config, path)?;
         }
-    
+
         for path in &modified_paths {
             update_file(config, path)?;
         }
-    
+
         for path in &added_paths {
             add_file(config, path)?;
-        }    
+        }
     }
 
     Ok(())

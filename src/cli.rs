@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{builder::PathBufValueParser, Arg, ArgMatches, Command, ArgAction};
+use clap::{builder::PathBufValueParser, Arg, ArgAction, ArgMatches, Command};
 
 use crate::{DirSyncConfig, DirSyncError};
 
@@ -13,7 +13,7 @@ pub fn cli() -> Command {
             Arg::new("dry_run")
                 .long("dry-run")
                 .action(ArgAction::SetTrue)
-                .help("Dry run without executing any changes")
+                .help("Dry run without executing any changes"),
         )
         .arg(
             Arg::new("src_dir")
@@ -42,12 +42,11 @@ fn get_arg<'a, T: Clone + Send + Sync + 'static>(
 
 pub fn get_config() -> Result<DirSyncConfig, DirSyncError> {
     let matches = cli().get_matches();
-    let src_dir = get_arg::<PathBuf>(&matches, "src_dir")?.canonicalize()?;
-    let dst_dir = get_arg::<PathBuf>(&matches, "dst_dir")?.canonicalize()?;
+    let src_dir = get_arg::<PathBuf>(&matches, "src_dir")?.clone();
+    let dst_dir = get_arg::<PathBuf>(&matches, "dst_dir")?.clone();
     let dry_run = *(get_arg::<bool>(&matches, "dry_run")?);
-    println!("DRY {}", dry_run);
 
-    if src_dir == dst_dir {
+    if src_dir.canonicalize()? == dst_dir.canonicalize()? {
         return Err(DirSyncError::SameDirectory);
     }
 
