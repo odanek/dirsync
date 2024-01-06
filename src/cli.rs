@@ -10,18 +10,18 @@ pub fn cli() -> Command {
         .version("0.1.0")
         .about("Directory synchronization utility")
         .arg(
-            Arg::new("source_dir")
+            Arg::new("src_dir")
                 .index(1)
                 .value_parser(PathBufValueParser::new())
                 .required(true)
                 .help("Source directory"),
         )
         .arg(
-            Arg::new("target_dir")
+            Arg::new("dst_dir")
                 .index(2)
                 .value_parser(PathBufValueParser::new())
                 .required(true)
-                .help("Target directory"),
+                .help("Destination directory"),
         )
 }
 
@@ -36,11 +36,16 @@ fn get_arg<'a, T: Clone + Send + Sync + 'static>(
 
 pub fn get_config() -> Result<DirSyncConfig, DirSyncError> {
     let matches = cli().get_matches();
-    let source_dir = get_arg::<PathBuf>(&matches, "source_dir")?.clone();
-    let target_dir = get_arg::<PathBuf>(&matches, "target_dir")?.clone();
+    let src_dir = get_arg::<PathBuf>(&matches, "src_dir")?.canonicalize()?;
+    let dst_dir = get_arg::<PathBuf>(&matches, "dst_dir")?.canonicalize()?;
+
+    if src_dir == dst_dir {
+        return Err(DirSyncError::SameDirectory);
+    }
 
     Ok(DirSyncConfig {
-        source_dir,
-        target_dir,
+        src_dir,
+        dst_dir,
+        dry_run: true,
     })
 }
