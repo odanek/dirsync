@@ -1,0 +1,10 @@
+[package]
+name = "dirsync"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = "4.4.0"
+filetime = "0.2.23"
+anyhow = "1.0.79"
+thiserror = "1.0.56"
