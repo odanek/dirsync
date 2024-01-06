@@ -1,0 +1,2 @@
+# dirsync
+Directory synchronization utility
