@@ -13,12 +13,6 @@ fn is_not_ignored(entry: &DirEntry) -> bool {
     entry.file_name() != ".DS_Store"
 }
 
-fn concat_path(prefix: &Path, suffix: &Path) -> PathBuf {
-    let mut buf = prefix.to_owned();
-    buf.push(suffix);
-    buf
-}
-
 fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
     let mut paths = Vec::new();
     let mut invalid_paths = Vec::new();
@@ -44,8 +38,8 @@ fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
 }
 
 fn is_modified(config: &DirSyncConfig, path: &Path) -> Result<bool, DirSyncError> {
-    let src_file = concat_path(&config.src_dir, path);
-    let dst_file = concat_path(&config.dst_dir, path);
+    let src_file = config.src_path(path);
+    let dst_file = config.dst_path(path);
 
     if src_file.is_dir() && dst_file.is_dir() {
         return Ok(false);
@@ -64,11 +58,52 @@ fn is_modified(config: &DirSyncConfig, path: &Path) -> Result<bool, DirSyncError
     }
 }
 
-fn copy_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
-    let src_file = concat_path(&config.src_dir, path);
-    let dst_file = concat_path(&config.dst_dir, path);
+fn add_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
+    let src_file = config.src_path(path);
+    let dst_file = config.dst_path(path);
 
-    fs::copy(src_file, dst_file)?;
+    if src_file.is_dir() {
+        println!("CD   {:?}", dst_file);
+        fs::create_dir(dst_file)?;
+    } else {
+        println!("CF   {:?}", dst_file);
+        fs::copy(src_file, dst_file)?;    
+    }
+
+    Ok(())
+}
+
+fn update_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
+    let src_file = config.src_path(path);
+    let dst_file = config.dst_path(path);
+
+    if src_file.is_dir() {
+        println!("F->D {:?}", dst_file);
+        fs::remove_file(&dst_file)?;
+        fs::create_dir(&dst_file)?;
+    } else {
+        if dst_file.is_dir() {
+            println!("D->F {:?}", dst_file);
+            fs::remove_dir(&dst_file)?;
+        } else {
+            println!("UF   {:?}", dst_file);
+        }
+        fs::copy(&src_file, &dst_file)?;
+    }
+
+    Ok(())
+}
+
+fn remove_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
+    let full_path = config.dst_path(path);        
+
+    if full_path.is_dir() {
+        println!("RD   {:?}", full_path);
+        fs::remove_dir(full_path)?
+    } else {
+        println!("RF   {:?}", full_path);
+        fs::remove_file(full_path)?
+    }
 
     Ok(())
 }
@@ -84,7 +119,7 @@ pub fn sync_dirs(config: &DirSyncConfig) -> Result<(), DirSyncError> {
 
     let mut added_paths = Vec::new();
     let mut modified_paths = Vec::new();
-    let removed_paths = dst_set.difference(&src_set);
+    let removed_paths: Vec<&PathBuf> = dst_paths.iter().filter(|p| !src_set.contains(p)).collect();
 
     for path in &src_paths {
         if dst_set.contains(path) {
@@ -97,25 +132,38 @@ pub fn sync_dirs(config: &DirSyncConfig) -> Result<(), DirSyncError> {
         }
     }
 
-    println!("=== ADDED");
-    for path in added_paths {
-        println!("{}", path.display());
-        copy_file(config, path)?;
+    println!("=== Added ===");
+    for path in &added_paths {
+        println!("{}", path.display());        
     }
+    println!();
 
-    println!("=== MODIFIED");
-    for path in modified_paths {
-        println!("{}", path.display());
-        copy_file(config, path)?;
-    }
-
-    println!("=== REMOVED");
-    for path in removed_paths {
+    println!("=== Modified ===");
+    for path in &modified_paths {
         println!("{}", path.display());
     }
+    println!();
 
-    // TODO Pozor na zmenu soubor -> adresar a naopak
-    // TODO Pozor kdyz smazu adresar tak uz nemusim mazat soubory a adresare v nem
+    println!("=== Removed ===");
+    for path in &removed_paths {
+        println!("{}", path.display());
+    }
+    println!();
+
+    if !config.dry_run {
+        println!("=== Executing ===");
+        for path in removed_paths.iter().rev() {
+            remove_file(config, path)?;
+        }
+    
+        for path in &modified_paths {
+            update_file(config, path)?;
+        }
+    
+        for path in &added_paths {
+            add_file(config, path)?;
+        }    
+    }
 
     Ok(())
 }

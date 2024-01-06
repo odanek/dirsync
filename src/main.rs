@@ -7,6 +7,26 @@ use cli::get_config;
 use sync::sync_dirs;
 use thiserror::Error;
 
+pub struct DirSyncConfig {
+    pub src_dir: PathBuf,
+    pub dst_dir: PathBuf,
+    pub dry_run: bool,
+}
+
+impl DirSyncConfig {
+    fn src_path(&self, path: &Path) -> PathBuf {
+        let mut buf = self.src_dir.clone();
+        buf.push(path);
+        buf
+    }
+
+    fn dst_path(&self, path: &Path) -> PathBuf {
+        let mut buf = self.dst_dir.clone();
+        buf.push(path);
+        buf
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum DirSyncError {
     #[error("Source and destination paths point to the same directory")]
@@ -23,18 +43,10 @@ pub enum DirSyncError {
     DstNewerThanSrc(PathBuf),
 }
 
-pub struct DirSyncConfig {
-    pub src_dir: PathBuf,
-    pub dst_dir: PathBuf,
-    pub dry_run: bool,
-}
-
 fn check_path(path: &Path) -> Result<(), DirSyncError> {
-    if !path.exists() {
-        Err(DirSyncError::NonExistentPath(path.to_owned()))
-    } else {
-        Ok(())
-    }
+    path.exists()
+        .then_some(())
+        .ok_or_else(|| DirSyncError::NonExistentPath(path.to_owned()))
 }
 
 fn main() -> Result<(), DirSyncError> {
