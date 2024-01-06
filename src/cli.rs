@@ -46,10 +46,6 @@ pub fn get_config() -> Result<DirSyncConfig, DirSyncError> {
     let dst_dir = get_arg::<PathBuf>(&matches, "dst_dir")?.clone();
     let dry_run = *(get_arg::<bool>(&matches, "dry_run")?);
 
-    if src_dir.canonicalize()? == dst_dir.canonicalize()? {
-        return Err(DirSyncError::SameDirectory);
-    }
-
     Ok(DirSyncConfig {
         src_dir,
         dst_dir,

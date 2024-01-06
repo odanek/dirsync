@@ -49,9 +49,17 @@ fn check_path(path: &Path) -> Result<(), DirSyncError> {
         .ok_or_else(|| DirSyncError::NonExistentPath(path.to_owned()))
 }
 
-fn main() -> Result<(), DirSyncError> {
-    let config = get_config()?;
+fn validate(config: &DirSyncConfig) -> Result<(), DirSyncError> {
     check_path(&config.src_dir)?;
     check_path(&config.dst_dir)?;
+    if config.src_dir.canonicalize()? == config.dst_dir.canonicalize()? {
+        return Err(DirSyncError::SameDirectory);
+    }
+    Ok(())
+}
+
+fn main() -> Result<(), DirSyncError> {
+    let config = get_config()?;
+    validate(&config)?;
     sync_dirs(&config)
 }
