@@ -4,13 +4,17 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use filetime::FileTime;
+use filetime::{FileTime, set_file_times};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::{DirSyncConfig, DirSyncError};
 
 fn is_not_ignored(entry: &DirEntry) -> bool {
-    entry.file_name() != ".DS_Store" && entry.file_name() != "tmp"
+    let Some(file_name) = entry.file_name().to_str() else {
+        println!("WARNING Path {} cannot be converted to string", entry.path().display());
+        return true;
+    };
+    file_name != ".DS_Store" && file_name != "_nosync" && !file_name.starts_with("._")
 }
 
 fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
@@ -52,10 +56,15 @@ fn is_modified(config: &DirSyncConfig, path: &Path) -> Result<bool, DirSyncError
     let dst_ts = FileTime::from_last_modification_time(&dst_metadata).unix_seconds();
 
     if src_ts < dst_ts {
-        Err(DirSyncError::DstNewerThanSrc(dst_file))
-    } else {
-        Ok(src_ts != dst_ts)
+        println!("WARNING {} is newer than source", dst_file.display());
     }
+    Ok(src_ts != dst_ts)
+}
+
+fn copy_modification_time(src_file: &Path, dst_file: &Path) -> Result<(), DirSyncError> {
+    let src_metadata = src_file.metadata()?;
+    set_file_times(dst_file, FileTime::from_last_access_time(&src_metadata), FileTime::from_last_modification_time(&src_metadata))?;
+    Ok(())
 }
 
 fn add_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
@@ -63,11 +72,12 @@ fn add_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
     let dst_file = config.dst_path(path);
 
     if src_file.is_dir() {
-        println!("CD   {:?}", dst_file);
+        println!("+D   {}", dst_file.display());
         fs::create_dir(dst_file)?;
     } else {
-        println!("CF   {:?}", dst_file);
-        fs::copy(src_file, dst_file)?;
+        println!("+F   {}", dst_file.display());
+        fs::copy(&src_file, &dst_file)?;
+        copy_modification_time(&src_file, &dst_file)?;
     }
 
     Ok(())
@@ -78,17 +88,18 @@ fn update_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
     let dst_file = config.dst_path(path);
 
     if src_file.is_dir() {
-        println!("F->D {:?}", dst_file);
+        println!("F->D {}", dst_file.display());
         fs::remove_file(&dst_file)?;
         fs::create_dir(&dst_file)?;
     } else {
         if dst_file.is_dir() {
-            println!("D->F {:?}", dst_file);
+            println!("D->F {}", dst_file.display());
             fs::remove_dir(&dst_file)?;
         } else {
-            println!("UF   {:?}", dst_file);
+            println!("UF   {}", dst_file.display());
         }
         fs::copy(&src_file, &dst_file)?;
+        copy_modification_time(&src_file, &dst_file)?;
     }
 
     Ok(())
@@ -98,10 +109,10 @@ fn remove_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
     let full_path = config.dst_path(path);
 
     if full_path.is_dir() {
-        println!("RD   {:?}", full_path);
+        println!("-D   {}", full_path.display());
         fs::remove_dir(full_path)?
     } else {
-        println!("RF   {:?}", full_path);
+        println!("-F   {}", full_path.display());
         fs::remove_file(full_path)?
     }
 
@@ -109,7 +120,7 @@ fn remove_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
 }
 
 pub fn sync_dirs(config: &DirSyncConfig) -> Result<(), DirSyncError> {
-    println!("Syncing {:?} -> {:?}", config.src_dir, config.dst_dir);
+    println!("Syncing {} -> {}", config.src_dir.display(), config.dst_dir.display());
 
     let src_paths = get_paths(&config.src_dir)?;
     let dst_paths = get_paths(&config.dst_dir)?;
