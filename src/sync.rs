@@ -4,14 +4,17 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use filetime::{FileTime, set_file_times};
+use filetime::{set_file_times, FileTime};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::{DirSyncConfig, DirSyncError};
 
 fn is_not_ignored(entry: &DirEntry) -> bool {
     let Some(file_name) = entry.file_name().to_str() else {
-        println!("WARNING Path {} cannot be converted to string", entry.path().display());
+        println!(
+            "WARNING Path {} cannot be converted to string",
+            entry.path().display()
+        );
         return true;
     };
     file_name != ".DS_Store" && file_name != "_nosync" && !file_name.starts_with("._")
@@ -63,7 +66,11 @@ fn is_modified(config: &DirSyncConfig, path: &Path) -> Result<bool, DirSyncError
 
 fn copy_modification_time(src_file: &Path, dst_file: &Path) -> Result<(), DirSyncError> {
     let src_metadata = src_file.metadata()?;
-    set_file_times(dst_file, FileTime::from_last_access_time(&src_metadata), FileTime::from_last_modification_time(&src_metadata))?;
+    set_file_times(
+        dst_file,
+        FileTime::from_last_access_time(&src_metadata),
+        FileTime::from_last_modification_time(&src_metadata),
+    )?;
     Ok(())
 }
 
@@ -120,7 +127,11 @@ fn remove_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
 }
 
 pub fn sync_dirs(config: &DirSyncConfig) -> Result<(), DirSyncError> {
-    println!("Syncing {} -> {}", config.src_dir.display(), config.dst_dir.display());
+    println!(
+        "Syncing {} -> {}",
+        config.src_dir.display(),
+        config.dst_dir.display()
+    );
 
     let src_paths = get_paths(&config.src_dir)?;
     let dst_paths = get_paths(&config.dst_dir)?;
