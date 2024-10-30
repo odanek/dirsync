@@ -17,7 +17,7 @@ fn is_not_ignored(entry: &DirEntry) -> bool {
         );
         return true;
     };
-    file_name != ".DS_Store" && file_name != "_nosync" && !file_name.starts_with("._")
+    file_name != ".DS_Store" && file_name != "_nosync" && file_name != "node_modules" && !file_name.starts_with("._")
 }
 
 fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
