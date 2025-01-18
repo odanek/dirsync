@@ -104,7 +104,13 @@ fn update_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
             fs::remove_dir(&dst_file)?;
         } else {
             println!("UF   {}", dst_file.display());
-        }
+
+            let meta = dst_file.metadata()?;
+            if meta.permissions().readonly() {
+                fs::remove_file(&dst_file)?
+            }
+        }   
+             
         fs::copy(&src_file, &dst_file)?;
         copy_modification_time(&src_file, &dst_file)?;
     }
@@ -113,14 +119,14 @@ fn update_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
 }
 
 fn remove_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> {
-    let full_path = config.dst_path(path);
+    let dst_file = config.dst_path(path);
 
-    if full_path.is_dir() {
-        println!("-D   {}", full_path.display());
-        fs::remove_dir(full_path)?
+    if dst_file.is_dir() {
+        println!("-D   {}", dst_file.display());
+        fs::remove_dir(dst_file)?
     } else {
-        println!("-F   {}", full_path.display());
-        fs::remove_file(full_path)?
+        println!("-F   {}", dst_file.display());
+        fs::remove_file(dst_file)?
     }
 
     Ok(())
