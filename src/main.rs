@@ -31,6 +31,10 @@ impl DirSyncConfig {
 pub enum DirSyncError {
     #[error("Source and destination paths point to the same directory")]
     SameDirectory,
+    #[error("Destination path is missing the .dirsync file")]
+    SyncFileMissing,
+    #[error("Source path in .dirsync file does not match the source path")]
+    SyncPathMismatch,
     #[error("Missing value for argument {0}")]
     MissingArgument(String),
     #[error("Path does not exist {0}")]
@@ -49,12 +53,27 @@ fn check_path(path: &Path) -> Result<(), DirSyncError> {
         .ok_or_else(|| DirSyncError::NonExistentPath(path.to_owned()))
 }
 
+fn check_sync(src: &Path, dst: &Path) -> Result<(), DirSyncError> {
+    if src.canonicalize()? == dst.canonicalize()? {
+        return Err(DirSyncError::SameDirectory);
+    }
+    let dirsync_path = dst.join(".dirsync");    
+    if !dirsync_path.exists() {
+        return Err(DirSyncError::SyncFileMissing);
+    }
+
+    let dirsync_src_path = std::fs::read_to_string(&dirsync_path)?;
+    if dirsync_src_path != src.to_string_lossy() {
+        return Err(DirSyncError::SyncPathMismatch);
+    }
+
+    Ok(())
+}
+
 fn validate(config: &DirSyncConfig) -> Result<(), DirSyncError> {
     check_path(&config.src_dir)?;
     check_path(&config.dst_dir)?;
-    if config.src_dir.canonicalize()? == config.dst_dir.canonicalize()? {
-        return Err(DirSyncError::SameDirectory);
-    }
+    check_sync(&config.src_dir, &config.dst_dir)?;
     Ok(())
 }
 
