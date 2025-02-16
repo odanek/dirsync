@@ -31,7 +31,9 @@ fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
         .filter_map(|v| v.ok())
         .for_each(|x| {
             if let Ok(suffix) = x.path().strip_prefix(dir) {
-                paths.push(suffix.to_owned());
+                if suffix.to_str() != Some(".dirsync") {
+                    paths.push(suffix.to_owned());
+                }                
             } else {
                 invalid_paths.push(x.path().to_owned());
             }
