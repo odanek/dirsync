@@ -57,7 +57,7 @@ fn check_sync(src: &Path, dst: &Path) -> Result<(), DirSyncError> {
     if src.canonicalize()? == dst.canonicalize()? {
         return Err(DirSyncError::SameDirectory);
     }
-    let dirsync_path = dst.join(".dirsync");    
+    let dirsync_path = dst.join(".dirsync");
     if !dirsync_path.exists() {
         return Err(DirSyncError::SyncFileMissing);
     }

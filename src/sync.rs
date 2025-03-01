@@ -17,7 +17,10 @@ fn is_not_ignored(entry: &DirEntry) -> bool {
         );
         return true;
     };
-    file_name != ".DS_Store" && file_name != "_nosync" && file_name != "node_modules" && !file_name.starts_with("._")
+    file_name != ".DS_Store"
+        && file_name != "_nosync"
+        && file_name != "node_modules"
+        && !file_name.starts_with("._")
 }
 
 fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
@@ -33,7 +36,7 @@ fn get_paths(dir: &Path) -> Result<Vec<PathBuf>, DirSyncError> {
             if let Ok(suffix) = x.path().strip_prefix(dir) {
                 if suffix.to_str() != Some(".dirsync") {
                     paths.push(suffix.to_owned());
-                }                
+                }
             } else {
                 invalid_paths.push(x.path().to_owned());
             }
@@ -111,8 +114,8 @@ fn update_file(config: &DirSyncConfig, path: &Path) -> Result<(), DirSyncError> 
             if meta.permissions().readonly() {
                 fs::remove_file(&dst_file)?
             }
-        }   
-             
+        }
+
         fs::copy(&src_file, &dst_file)?;
         copy_modification_time(&src_file, &dst_file)?;
     }
