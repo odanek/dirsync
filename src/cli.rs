@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{builder::PathBufValueParser, Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command, builder::PathBufValueParser};
 
 use crate::{DirSyncConfig, DirSyncError};
 

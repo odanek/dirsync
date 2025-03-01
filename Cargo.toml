@@ -1,10 +1,10 @@
 [package]
 name = "dirsync"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-thiserror = "2.0.8"
-clap = "4.5.23"
+thiserror = "2.0.11"
+clap = "4.5.31"
 filetime = "0.2.25"
 walkdir = "2.5.0"
